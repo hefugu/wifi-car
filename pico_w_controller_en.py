@@ -1,3 +1,8 @@
+"""
+Author:helo
+Created:2025/9/8
+GitHub: https://github.com/hefugu/wifi-car
+"""
 import network
 import socket
 import time
@@ -54,3 +59,4 @@ while True:
 
     # Send at ~20Hz
     time.sleep(0.05)
+
