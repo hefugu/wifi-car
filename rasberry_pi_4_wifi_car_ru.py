@@ -1,6 +1,7 @@
 """
 Author:helo
-
+Created:2025/9/8
+GitHub: https://github.com/hefugu/wifi-car
 """
 #!/usr/bin/env python3
 # rc_server.py — Pico W (UDP) → Raspberry Pi 4 → L293D (два двигателя) + Серво (GPIO18)
