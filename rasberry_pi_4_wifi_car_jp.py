@@ -8,7 +8,6 @@ GitHub: https://github.com/hefugu/wifi-car
 
 import argparse
 import logging
-import select
 import socket
 import time
 import pigpio
@@ -107,29 +106,6 @@ def parse_packet(data: bytes) -> tuple[int, int, int, int] | None:
     return int(b1), int(b2), x, y
 
 
-def recv_latest(sock: socket.socket) -> bytes:
-    """
-    UDP受信キューに複数パケットが溜まっていたら古いものを捨て、
-    必ず最新の1パケットだけを返す。
-
-    長時間スティックを倒した後に、古い前進/後退命令を順番に処理して
-    センターへ戻しても走り続ける現象を防ぐ。
-    """
-    data, _ = sock.recvfrom(256)
-
-    while True:
-        readable, _, _ = select.select([sock], [], [], 0)
-        if not readable:
-            break
-        try:
-            newer, _ = sock.recvfrom(256)
-            data = newer
-        except (BlockingIOError, socket.timeout):
-            break
-
-    return data
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="UDP RCブリッジ: Pico W -> RasPi 4 -> L293D + サーボ")
     parser.add_argument("--port", type=int, default=UDP_PORT, help="UDP受信ポート")
@@ -167,16 +143,12 @@ def main() -> None:
         pi.set_servo_pulsewidth(SERVO_PIN, 1500)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        # 受信バッファを小さめにして、古い操作命令が大量に残りにくくする。
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2048)
         sock.bind(("0.0.0.0", args.port))
         sock.settimeout(0.05)
 
         logging.info("UDP受信をポート %d で開始", args.port)
         logging.info("モーターピン: 左 12/5/4, 右 13/23/22")
         logging.info("モーター制御方式: DIGITAL HIGH/LOW（PWMなし）")
-        logging.info("UDP制御: 最新パケット優先（古い操作命令は破棄）")
         logging.info("操作: X=サーボのみ / Y=左右モーター全開 / b1無効 / b2=停止")
 
         last_ok = time.monotonic()
@@ -184,8 +156,7 @@ def main() -> None:
 
         while True:
             try:
-                # 1個ずつ処理せず、溜まっている場合は最新パケットまで一気に進む。
-                data = recv_latest(sock)
+                data, _ = sock.recvfrom(256)
             except socket.timeout:
                 if time.monotonic() - last_ok > args.failsafe:
                     if not failsafe_active:
@@ -195,7 +166,7 @@ def main() -> None:
                 continue
 
             if args.verbose:
-                logging.debug("LATESTデータ: %r", data)
+                logging.debug("RAWデータ: %r", data)
 
             parsed = parse_packet(data)
             if parsed is None:
@@ -215,10 +186,6 @@ def main() -> None:
             y_unit = adc_to_unit(y_raw, args.deadzone)
 
             if b2 == 0:
-                stop_motor(pi, IN1_L, IN2_L, EN_L)
-                stop_motor(pi, IN1_R, IN2_R, EN_R)
-            elif y_unit == 0.0:
-                # センターへ戻ったら両モーターを即停止。
                 stop_motor(pi, IN1_L, IN2_L, EN_L)
                 stop_motor(pi, IN1_R, IN2_R, EN_R)
             else:
