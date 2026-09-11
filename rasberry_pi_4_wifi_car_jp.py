@@ -21,9 +21,9 @@ FAILSAFE_SEC = 0.35        # 通信途絶で停止するまでの秒数
 # L293D ピン割り当て（BCM番号）
 # 実機配線:
 #   左 = EN 12 / IN1 5 / IN2 4
-#   右 = EN 13 / IN1 27 / IN2 17
+#   右 = EN 13 / IN1 23 / IN2 22
 EN_L, IN1_L, IN2_L = 12, 5, 4
-EN_R, IN1_R, IN2_R = 13, 27, 17
+EN_R, IN1_R, IN2_R = 13, 23, 22
 
 # サーボ
 SERVO_PIN = 18
@@ -147,7 +147,7 @@ def main() -> None:
         sock.settimeout(0.05)
 
         logging.info("UDP受信をポート %d で開始", args.port)
-        logging.info("モーターピン: 左 12/5/4, 右 13/27/17")
+        logging.info("モーターピン: 左 12/5/4, 右 13/23/22")
         logging.info("モーター制御方式: DIGITAL HIGH/LOW（PWMなし）")
         logging.info("操作: X=サーボのみ / Y=左右モーター全開 / b1無効 / b2=停止")
 
